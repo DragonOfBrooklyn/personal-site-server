@@ -19,7 +19,7 @@ async function callClaude(convo: MessageParam[]){
     max_tokens: 100,
     messages: convo,
     model: 'claude-3-opus-20240229',
-    system: 'You should only respond with known information about Michael Jordan, the famous basketball player. Restrict information that cannot be legally asked during an interview such as a birth year. Limit responses to 200 characters.',
+    system: 'You should only respond with known information about Jordan Long. Restrict information that cannot be legally asked during an interview such as race, color, religion, sex, national origin, or age. Limit responses to 200 characters.',
     temperature: 0,
   });
   return message.content;
@@ -35,27 +35,28 @@ Bun.serve({
       return res;
     }
     
-    
     if(headers.get('jlong-authorization') !== 'PersonalSiteForJordanLong') throw new Error('Unknown Authorization');
+    const responseHeaders = new Headers();
+    responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     if(method === 'POST' && body){
       const reqBody = await Bun.readableStreamToJSON(body);
       let claudeResponse;
       callClaude(reqBody)
-      //   .then((values) => {
-          
-      //   })
+        .then((value): void => {
+          console.log('claude response in then... ',value);
+          claudeResponse = value;
+        })
       // console.log('response from claude ',claudeResponse);
       // if(Promise.)
-      // const res = new Response('talked to claude');
-      // res.headers.set('Access-Control-Allow-Origin', '*');
-      // res.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      // return res;
+
+      const res = new Response(await claudeResponse, {headers: responseHeaders});
+      console.log('sending back to frontend', claudeResponse);
+      return res;
     }
 
     //Handle CORS request bounces
-    const res = new Response('Hello Bun!!!');
-    res.headers.set('Access-Control-Allow-Origin', '*');
-    res.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    const res = new Response('Hello Bun!!!', {headers: responseHeaders});
     return res;
       
   }
