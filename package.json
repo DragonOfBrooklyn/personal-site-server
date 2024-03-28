@@ -1,0 +1,19 @@
+{
+  "name": "personal-site-server",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun index.ts",
+    "start-prod": "NODE_ENV=production bun index.ts",
+    "export": "zip -r personal-site-server.zip ./ -x \"node_modules/*\" \".git/*\""
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.19.0"
+  }
+}
