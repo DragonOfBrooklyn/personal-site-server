@@ -3,17 +3,21 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "bun index.ts",
-    "start-prod": "NODE_ENV=production bun index.ts",
+    "start": "bun server.ts",
+    "start-prod": "NODE_ENV=production bun server.ts",
     "export": "zip -r personal-site-server.zip ./ -x \"node_modules/*\" \".git/*\""
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.19.0"
+    "@anthropic-ai/sdk": "^0.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
   }
 }
