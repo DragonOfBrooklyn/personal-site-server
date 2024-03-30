@@ -1,20 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { type MessageParam } from '@anthropic-ai/sdk/resources/messages.mjs';
-import express, { type Request, type Response } from "express";
-import cors from 'cors';
 
-const app = express();
-//handle CORS preflight issues
-app.use(cors({ origin: '*', credentials: true }));
-app.use((req: Request, res: Response, next: any) => {
-  if ('OPTIONS' === req.method) {
-    res.sendStatus(200);
-  } else {
-    next();
+const CORS_HEADERS = {
+  headers: {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'OPTIONS, POST',
+    'Access-Control-Allow-Headers': 'Content-Type, jlong-authorization',
   }
-});
-//parses body when post is received
-app.use(express.json());
+}
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -30,16 +23,34 @@ async function callClaude(convo: MessageParam[]){
   return message.content;
 }
 
-app.post('/', async (req: Request, res: Response) => {
-  const { method, headers } = req;
-  const { conversation } = req.body;
-  if(headers['jlong-authorization'] !== 'PersonalSiteForJordanLong') throw new Error('Unknown Authorization');
-  if(method === 'POST' && conversation){
-    return res.status(200).json(await callClaude(conversation));
-  }
-  return res.send('Incorrect type of request');
-})
+Bun.serve({
+  port: process.env.PORT,
+  async fetch(req: Request) {
+    const { method, headers, body } = req;
 
-app.listen(process.env.PORT, () => {
-  console.log(`listening on port ${process.env.PORT}...`);
+    // Handle CORS preflight requests
+    if (method === 'OPTIONS') {
+      const res = new Response('Departed', CORS_HEADERS);
+      return res;
+    }
+    
+    if(headers.get('jlong-authorization') !== 'PersonalSiteForJordanLong') throw new Error('Unknown Authorization');
+    
+    //headers to handle CORS request bounces
+    const responseHeaders = new Headers();
+    responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    responseHeaders.set('Content-Type', 'application/json')
+    
+    if(method === 'POST' && body){
+      const fullConversation = await Bun.readableStreamToJSON(body);
+      const claudeAnswer = callClaude(fullConversation.conversation)
+      .then((val) => {
+        return new Response(JSON.stringify(val[0]), {headers: responseHeaders})
+      });
+      return claudeAnswer;
+    }
+    return new Response('Incorrect type of request', {headers: responseHeaders});      
+  }
 })
+console.log(`listening on port ${process.env.PORT}...`);
