@@ -23,11 +23,9 @@ async function callClaude(
   query: string, 
   retry: boolean = true){
   const timezoneOption = {timeZone: "America/New_York"};
-  // console.log(`incoming query at ${new Date().toLocaleTimeString('en-US', timezoneOption)}`)
   let queryEmbeddings_res, vectorSearchResponse, queryEmbeddings, claude_res;
   if(!retry) console.log(`retrying at ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
   try {
-    // console.log(`before initial embed ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
     queryEmbeddings_res = await fetch('https://api.voyageai.com/v1/embeddings',{
       method: 'POST',
       headers: {
@@ -40,7 +38,6 @@ async function callClaude(
         "input_type": "query"
       })
     });
-    // console.log(`after initial embed ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
     queryEmbeddings = await queryEmbeddings_res.json();
   }catch (err){
     if(retry) return callClaude(convo, query, false);
@@ -50,14 +47,12 @@ async function callClaude(
     }];
   }
   try{
-    // console.log(`before vector search ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
     vectorSearchResponse = await pcindex.query({
       topK: 4,
       //@ts-ignore
       vector: queryEmbeddings.data[0].embedding,
       includeMetadata: true
     });
-    // console.log(`after vector search ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
   }catch (err){
     if(retry) return callClaude(convo, query, false);
     return [{
@@ -68,7 +63,6 @@ async function callClaude(
   let retrievedDocuments = '';
   try{
     if(typeof vectorSearchResponse === 'undefined') throw new Error('No vector matches');
-    // console.log(`vector match compilation ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
     for await(const {metadata} of vectorSearchResponse.matches){
       if(!metadata) continue;
       retrievedDocuments = retrievedDocuments + ' ' + metadata['originaltext'];
@@ -81,15 +75,15 @@ async function callClaude(
     }];
   }
   try{
-    // console.log(`before claude call ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
     claude_res = await anthropic.messages.create({
       max_tokens: 500,
-      messages: [...convo, {"role": "user", "content": `Based on the prior conversation and this information: '${retrievedDocuments ?? 'No additional information relevant to Jordan'}', generate a response to the this question: ${query}`}],
+      //no longer sends the old conversation, this api either doesn't accept sending entire conversations or has a bug that doesn't accept an array of messages
+      messages: [{"role": "user", "content": `Based on this information: '${retrievedDocuments ?? 'No additional information relevant to Jordan'}', generate a response to the this question: ${query}`}],
       model: 'claude-3-opus-20240229',
-      // model: 'claude-3-haiku-20240307',
       system: `You should only respond with known information about Jordan Long. 
       Restrict information that cannot be legally asked during an interview 
       such as race, color, religion, sex, national origin, or age. Try to limit your responses to no more than two paragraph.
+      If any referenced information uses the first person like I or me, please replace with Jordan, he, or him.
       Avoid referencing the information provided and just speak as if you were talking about a friend.
       If irrelevant information to Jordan is asked, please comprehend the topic of the question and answer with similar info about Jordan.
       For example, if asked how tall is mount everest, Jordan likes the outdoors so you can reference his relevant hobbies instead.
@@ -98,7 +92,6 @@ async function callClaude(
       `,
       temperature: 0,
     });
-    // console.log(`after claude call ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
   }catch (err){
     if(retry) return callClaude(convo, query, false);
     return [{
@@ -106,7 +99,6 @@ async function callClaude(
       text: "I'm having difficulty referencing Jordan's background with your question, I'll have to contact him about this... Feel free to ask me other questions about Jordan"
     }];
   }
-  // console.log(`before claude return ${new Date().toLocaleTimeString('en-US', timezoneOption)}`);
   return claude_res.content;
 }
 
